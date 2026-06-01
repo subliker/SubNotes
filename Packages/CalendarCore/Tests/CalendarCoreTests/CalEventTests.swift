@@ -10,7 +10,13 @@ import Testing
             start: Date(timeIntervalSince1970: 1_700_000_000),
             end: Date(timeIntervalSince1970: 1_700_001_800),
             isAllDay: false,
-            calendarColorHex: "#FF8800"
+            calendarColorHex: "#FF8800",
+            calendarTitle: "Work",
+            location: "https://meet.google.com/abc-defg-hij",
+            videoLink: VideoLink(
+                url: URL(string: "https://meet.google.com/abc-defg-hij")!,
+                provider: .meet
+            )
         )
 
         let encoder = JSONEncoder()

@@ -14,6 +14,20 @@ calendars through EventKit. Targets recent macOS (Liquid Glass).
 
 > Status: early development. See [PLAN.md](PLAN.md) for the roadmap.
 
+## Why this project
+
+> "I don't give a damn about learning Swift — I just want a utility that's
+> convenient for me. With this project I want to find out for myself how
+> autonomous neural networks really are at this kind of thing right now."
+>
+> — the author
+
+> «Мне нахрен не нужно учить Swift, я просто хочу удобную мне утилиту. Этим
+> проектом я хочу понять для себя, насколько самостоятельны нейросети в
+> подобном сейчас.»
+>
+> — автор
+
 ## Building
 
 Requires Xcode 26+ and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
