@@ -1,0 +1,38 @@
+name: SubNotes
+
+options:
+  bundleIdPrefix: com.subliker
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+packages:
+  CalendarCore:
+    path: Packages/CalendarCore
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.0.1"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    PROVISIONING_PROFILE_SPECIFIER: ""
+
+targets:
+  SubNotes:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/App
+    dependencies:
+      - package: CalendarCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.subliker.subnotes
+        GENERATE_INFOPLIST_FILE: "YES"
+        INFOPLIST_KEY_LSUIElement: "YES"
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "SubNotes reads your calendars to show upcoming events."
+        INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 subliker. MIT License."

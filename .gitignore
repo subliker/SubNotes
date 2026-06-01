@@ -1,6 +1,10 @@
 # macOS
 .DS_Store
 
+# IDEs
+.idea/
+.vscode/
+
 # Xcode — generated project (we use XcodeGen as source of truth)
 *.xcodeproj
 *.xcworkspace
