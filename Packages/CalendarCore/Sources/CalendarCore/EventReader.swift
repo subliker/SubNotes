@@ -37,7 +37,7 @@ public final class EventReader {
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
         return store.events(matching: predicate)
             .sorted { $0.startDate < $1.startDate }
-            .map(Self.normalize)
+            .map { Self.normalize($0) }
     }
 
     /// Emits a value every time EventKit reports the calendar store changed,
@@ -54,23 +54,43 @@ public final class EventReader {
         }
     }
 
-    nonisolated static func normalize(_ event: EKEvent) -> CalEvent {
+    nonisolated static func normalize(
+        _ event: EKEvent,
+        colorResolver: EventColorResolving = CalendarColorResolver()
+    ) -> CalEvent {
         let videoLink = VideoLinkParser.firstLink(in: [
             event.url?.absoluteString,
             event.location,
             event.notes
         ])
+        let calendarColorHex = event.calendar.cgColor.hexString
         return CalEvent(
             id: event.eventIdentifier ?? UUID().uuidString,
             title: event.title ?? "Untitled",
             start: event.startDate,
             end: event.endDate,
             isAllDay: event.isAllDay,
-            calendarColorHex: event.calendar.cgColor.hexString,
+            calendarColorHex: calendarColorHex,
+            colorKey: colorResolver.colorKey(for: event),
             calendarTitle: event.calendar.title,
             location: event.location,
             videoLink: videoLink
         )
+    }
+}
+
+/// The seam where an event's display/customization color is resolved. The MVP
+/// resolver uses the calendar color (all EventKit exposes); a future Google
+/// path can swap in per-event `colorId` here without touching `normalize`'s
+/// callers or any rules keyed on `ColorKey`.
+public protocol EventColorResolving: Sendable {
+    func colorKey(for event: EKEvent) -> ColorKey?
+}
+
+public struct CalendarColorResolver: EventColorResolving {
+    public init() {}
+    public func colorKey(for event: EKEvent) -> ColorKey? {
+        ColorKey(hex: event.calendar.cgColor.hexString)
     }
 }
 

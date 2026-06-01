@@ -9,6 +9,10 @@ public struct CalEvent: Codable, Identifiable, Hashable, Sendable {
     public let end: Date
     public let isAllDay: Bool
     public let calendarColorHex: String?
+    /// The resolved color identity used for display and (future) per-color
+    /// customization. Today derived from the calendar color; a later Google
+    /// path can resolve a per-event color here without touching call sites.
+    public let colorKey: ColorKey?
     public let calendarTitle: String?
     public let location: String?
     public let videoLink: VideoLink?
@@ -20,6 +24,7 @@ public struct CalEvent: Codable, Identifiable, Hashable, Sendable {
         end: Date,
         isAllDay: Bool = false,
         calendarColorHex: String? = nil,
+        colorKey: ColorKey? = nil,
         calendarTitle: String? = nil,
         location: String? = nil,
         videoLink: VideoLink? = nil
@@ -30,6 +35,7 @@ public struct CalEvent: Codable, Identifiable, Hashable, Sendable {
         self.end = end
         self.isAllDay = isAllDay
         self.calendarColorHex = calendarColorHex
+        self.colorKey = colorKey
         self.calendarTitle = calendarTitle
         self.location = location
         self.videoLink = videoLink
