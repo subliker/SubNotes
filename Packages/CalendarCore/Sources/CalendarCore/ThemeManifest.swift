@@ -86,4 +86,17 @@ public struct ThemeManifest: Codable, Identifiable, Sendable, Equatable {
         self.duration = duration; self.sound = sound; self.animation = animation
         self.textZones = textZones; self.buttons = buttons; self.assets = assets
     }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        version = try c.decode(Int.self, forKey: .version)
+        duration = try c.decodeIfPresent(Double.self, forKey: .duration)
+        sound = try c.decodeIfPresent(String.self, forKey: .sound)
+        animation = try c.decodeIfPresent(AnimationSpec.self, forKey: .animation)
+        textZones = try c.decodeIfPresent([TextZone].self, forKey: .textZones) ?? []
+        buttons = try c.decodeIfPresent([ButtonSpec].self, forKey: .buttons) ?? []
+        assets = try c.decodeIfPresent([String].self, forKey: .assets) ?? []
+    }
 }
