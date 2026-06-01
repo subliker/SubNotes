@@ -11,7 +11,18 @@ public final class EventReader {
     public init() {}
 
     public func requestAccess() async throws -> Bool {
-        try await store.requestFullAccessToEvents()
+        // Use the completion-handler API wrapped in a continuation: the async
+        // variant would send the non-Sendable EKEventStore across an isolation
+        // boundary, which Swift 6 strict concurrency rejects.
+        try await withCheckedThrowingContinuation { continuation in
+            store.requestFullAccessToEvents { granted, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: granted)
+                }
+            }
+        }
     }
 
     public var authorizationStatus: EKAuthorizationStatus {
