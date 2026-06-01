@@ -37,16 +37,40 @@ public final class EventReader {
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
         return store.events(matching: predicate)
             .sorted { $0.startDate < $1.startDate }
-            .map { event in
-                CalEvent(
-                    id: event.eventIdentifier ?? UUID().uuidString,
-                    title: event.title ?? "Untitled",
-                    start: event.startDate,
-                    end: event.endDate,
-                    isAllDay: event.isAllDay,
-                    calendarColorHex: event.calendar.cgColor.hexString
-                )
+            .map(Self.normalize)
+    }
+
+    /// Emits a value every time EventKit reports the calendar store changed,
+    /// so the UI can re-read events. The observer is removed when the consumer
+    /// stops iterating (e.g. the task is cancelled).
+    public func storeChanges() -> AsyncStream<Void> {
+        AsyncStream { continuation in
+            let task = Task {
+                for await _ in NotificationCenter.default.notifications(named: .EKEventStoreChanged) {
+                    continuation.yield(())
+                }
             }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    nonisolated static func normalize(_ event: EKEvent) -> CalEvent {
+        let videoLink = VideoLinkParser.firstLink(in: [
+            event.url?.absoluteString,
+            event.location,
+            event.notes
+        ])
+        return CalEvent(
+            id: event.eventIdentifier ?? UUID().uuidString,
+            title: event.title ?? "Untitled",
+            start: event.startDate,
+            end: event.endDate,
+            isAllDay: event.isAllDay,
+            calendarColorHex: event.calendar.cgColor.hexString,
+            calendarTitle: event.calendar.title,
+            location: event.location,
+            videoLink: videoLink
+        )
     }
 }
 

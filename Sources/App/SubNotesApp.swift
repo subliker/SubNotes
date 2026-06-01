@@ -26,7 +26,10 @@ final class AppModel {
     private let reader = EventReader()
 
     init() {
-        Task { await refresh() }
+        Task {
+            await refresh()
+            await observeStoreChanges()
+        }
     }
 
     func refresh() async {
@@ -37,6 +40,13 @@ final class AppModel {
         }
         guard accessGranted else { return }
         events = reader.upcomingEvents()
+    }
+
+    private func observeStoreChanges() async {
+        for await _ in reader.storeChanges() {
+            guard accessGranted else { continue }
+            events = reader.upcomingEvents()
+        }
     }
 }
 

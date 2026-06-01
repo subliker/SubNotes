@@ -9,6 +9,9 @@ public struct CalEvent: Codable, Identifiable, Hashable, Sendable {
     public let end: Date
     public let isAllDay: Bool
     public let calendarColorHex: String?
+    public let calendarTitle: String?
+    public let location: String?
+    public let videoLink: VideoLink?
 
     public init(
         id: String,
@@ -16,7 +19,10 @@ public struct CalEvent: Codable, Identifiable, Hashable, Sendable {
         start: Date,
         end: Date,
         isAllDay: Bool = false,
-        calendarColorHex: String? = nil
+        calendarColorHex: String? = nil,
+        calendarTitle: String? = nil,
+        location: String? = nil,
+        videoLink: VideoLink? = nil
     ) {
         self.id = id
         self.title = title
@@ -24,5 +30,8 @@ public struct CalEvent: Codable, Identifiable, Hashable, Sendable {
         self.end = end
         self.isAllDay = isAllDay
         self.calendarColorHex = calendarColorHex
+        self.calendarTitle = calendarTitle
+        self.location = location
+        self.videoLink = videoLink
     }
 }
