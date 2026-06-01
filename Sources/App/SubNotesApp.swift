@@ -9,7 +9,7 @@ struct SubNotesApp: App {
     var body: some Scene {
         MenuBarExtra {
             EventListView(model: model)
-                .frame(width: 320, height: 380)
+                .frame(width: 320, height: 420)
         } label: {
             Image(systemName: "calendar.badge.clock")
         }
@@ -22,6 +22,8 @@ struct SubNotesApp: App {
 final class AppModel {
     var events: [CalEvent] = []
     var accessGranted = false
+
+    var days: [EventDay] { EventGrouping.byDay(events) }
 
     private let reader = EventReader()
 
@@ -62,12 +64,21 @@ struct EventListView: View {
             if !model.accessGranted {
                 placeholder("Нет доступа к календарю",
                             systemImage: "lock.fill")
-            } else if model.events.isEmpty {
+            } else if model.days.isEmpty {
                 placeholder("Нет ближайших событий",
                             systemImage: "calendar")
             } else {
-                List(model.events) { event in
-                    EventRow(event: event)
+                List {
+                    ForEach(model.days) { day in
+                        Section(DayLabel.format(day.date)) {
+                            ForEach(day.allDay) { event in
+                                EventRow(event: event)
+                            }
+                            ForEach(day.timed) { event in
+                                EventRow(event: event)
+                            }
+                        }
+                    }
                 }
                 .listStyle(.inset)
             }
@@ -112,19 +123,30 @@ struct EventRow: View {
     let event: CalEvent
 
     var body: some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(Color(hex: event.calendarColorHex) ?? .accentColor)
-                .frame(width: 8, height: 8)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(event.title)
-                    .lineLimit(1)
-                Text(timeLabel)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        Button {
+            EventOpener.openInCalendar(event)
+        } label: {
+            HStack(spacing: 10) {
+                Capsule()
+                    .fill(event.displayColor ?? .accentColor)
+                    .frame(width: 4, height: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(event.title)
+                        .lineLimit(1)
+                    Text(timeLabel)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if event.videoLink != nil {
+                    Image(systemName: "video.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
-            Spacer()
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .padding(.vertical, 2)
     }
 
@@ -132,17 +154,67 @@ struct EventRow: View {
         if event.isAllDay {
             return "Весь день"
         }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "E, HH:mm"
-        return formatter.string(from: event.start)
+        return Self.timeFormatter.string(from: event.start)
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+}
+
+/// Formats a day header as «Сегодня» / «Завтра» / «пн, 2 июня».
+enum DayLabel {
+    static func format(_ date: Date, calendar: Calendar = .current) -> String {
+        if calendar.isDateInToday(date) { return "Сегодня" }
+        if calendar.isDateInTomorrow(date) { return "Завтра" }
+        return formatter.string(from: date)
+    }
+
+    private static let formatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEE, d MMMM"
+        return f
+    }()
+}
+
+/// Deep-links an event into the system Calendar.app. EventKit exposes no public
+/// URL for an event, so we use the widely-used `ical://ekevent` scheme and fall
+/// back to just launching Calendar.app if it is rejected.
+enum EventOpener {
+    static func openInCalendar(_ event: CalEvent) {
+        let encoded = event.id.addingPercentEncoding(
+            withAllowedCharacters: .urlPathAllowed
+        ) ?? event.id
+        if let url = URL(string: "ical://ekevent/\(encoded)?method=show&options=more"),
+           NSWorkspace.shared.open(url) {
+            return
+        }
+        if let calendarApp = NSWorkspace.shared.urlForApplication(
+            withBundleIdentifier: "com.apple.iCal"
+        ) {
+            NSWorkspace.shared.openApplication(
+                at: calendarApp,
+                configuration: NSWorkspace.OpenConfiguration()
+            )
+        }
+    }
+}
+
+private extension CalEvent {
+    /// Prefers the resolved `ColorKey` (the future per-color customization key),
+    /// falling back to the raw calendar color hex.
+    var displayColor: Color? {
+        Color(hex: colorKey?.hex) ?? Color(hex: calendarColorHex)
     }
 }
 
 private extension Color {
     init?(hex: String?) {
         guard let hex,
-              let value = Int(hex.dropFirst(), radix: 16),
-              hex.hasPrefix("#") else { return nil }
+              hex.hasPrefix("#"),
+              let value = Int(hex.dropFirst(), radix: 16) else { return nil }
         self.init(
             red: Double((value >> 16) & 0xFF) / 255,
             green: Double((value >> 8) & 0xFF) / 255,
