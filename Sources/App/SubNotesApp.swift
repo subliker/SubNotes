@@ -4,16 +4,30 @@ import CalendarCore
 
 @main
 struct SubNotesApp: App {
-    @State private var model = AppModel()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
         MenuBarExtra {
-            EventListView(model: model)
+            EventListView(model: appDelegate.model)
                 .frame(width: 320, height: 420)
         } label: {
             Image(systemName: "calendar.badge.clock")
         }
         .menuBarExtraStyle(.window)
+    }
+}
+
+/// Owns the single `AppModel` (event source) and the menu-bar ticker. The
+/// popover scene and the ticker share one model so both reflect the same
+/// events; the ticker is an AppKit `NSStatusItem` created once the app finishes
+/// launching.
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    let model = AppModel()
+    private var ticker: TickerStatusItem?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        ticker = TickerStatusItem(model: model)
     }
 }
 
