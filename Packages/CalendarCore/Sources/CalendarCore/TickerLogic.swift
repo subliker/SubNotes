@@ -62,4 +62,26 @@ public enum TickerLogic {
             : "через \(entry.minutesUntilStart) мин"
         return "⏰ \(lead) · \(entry.event.title)"
     }
+
+    /// The visible slice of a scrolling marquee. Text that fits the window is
+    /// shown as-is (no scroll); longer text wraps around through a gap so it
+    /// reads continuously. Drives the menu-bar label one character at a time.
+    public static func marqueeFrame(
+        _ text: String,
+        offset: Int,
+        windowLength: Int,
+        gap: String = "     "
+    ) -> String {
+        let chars = Array(text)
+        guard chars.count > windowLength else { return text }
+        let padded = chars + Array(gap)
+        let n = padded.count
+        let start = ((offset % n) + n) % n
+        var frame = String()
+        frame.reserveCapacity(windowLength)
+        for i in 0..<windowLength {
+            frame.append(padded[(start + i) % n])
+        }
+        return frame
+    }
 }

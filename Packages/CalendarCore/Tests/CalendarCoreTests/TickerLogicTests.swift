@@ -92,4 +92,18 @@ import Testing
         let entry = TickerEntry(event: event("e", startsInMinutes: 0), minutesUntilStart: 0)
         #expect(TickerLogic.line(for: entry) == "⏰ сейчас · e")
     }
+
+    @Test func marqueeShowsShortTextAsIs() {
+        #expect(TickerLogic.marqueeFrame("abc", offset: 5, windowLength: 10) == "abc")
+    }
+
+    @Test func marqueeScrollsLongTextAndWraps() {
+        let text = "0123456789"
+        // offset 0 → first 5 chars.
+        #expect(TickerLogic.marqueeFrame(text, offset: 0, windowLength: 5, gap: "__") == "01234")
+        // offset 1 → shifted by one.
+        #expect(TickerLogic.marqueeFrame(text, offset: 1, windowLength: 5, gap: "__") == "12345")
+        // Wraps through the gap and back to the start (length 10 + gap 2 = 12).
+        #expect(TickerLogic.marqueeFrame(text, offset: 12, windowLength: 5, gap: "__") == "01234")
+    }
 }

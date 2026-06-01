@@ -4,30 +4,33 @@ import CalendarCore
 
 @main
 struct SubNotesApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var model = AppModel()
 
     var body: some Scene {
         MenuBarExtra {
-            EventListView(model: appDelegate.model)
+            EventListView(model: model)
                 .frame(width: 320, height: 420)
         } label: {
-            Image(systemName: "calendar.badge.clock")
+            TickerLabel(model: model)
         }
         .menuBarExtraStyle(.window)
     }
 }
 
-/// Owns the single `AppModel` (event source) and the menu-bar ticker. The
-/// popover scene and the ticker share one model so both reflect the same
-/// events; the ticker is an AppKit `NSStatusItem` created once the app finishes
-/// launching.
-@MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    let model = AppModel()
-    private var ticker: TickerStatusItem?
+/// The single menu-bar item's label. RunCat-style smart appearance: when an
+/// event is imminent it shows the scrolling ticker text, otherwise the calendar
+/// icon. Clicking the item opens the popover either way (MenuBarExtra default),
+/// so the events list is always one click from here.
+struct TickerLabel: View {
+    let model: AppModel
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        ticker = TickerStatusItem(model: model)
+    var body: some View {
+        if let frame = model.tickerFrame {
+            Text(frame)
+                .font(.system(.body, design: .monospaced))
+        } else {
+            Image(systemName: "calendar.badge.clock")
+        }
     }
 }
 
@@ -37,14 +40,55 @@ final class AppModel {
     var events: [CalEvent] = []
     var accessGranted = false
 
+    /// The menu-bar label's current marquee frame, or `nil` when no event is
+    /// imminent (the label then shows the icon). Driven by `runTicker`.
+    var tickerFrame: String?
+
+    /// Minutes before an event that the ticker starts showing it.
+    var tickerLeadMinutes = 15
+
     var days: [EventDay] { EventGrouping.byDay(events) }
 
     private let reader = EventReader()
+
+    /// Marquee tuning: window width in chars and scroll cadence.
+    private let tickerWindow = 22
+    private let tickerTick = Duration.milliseconds(250)
+    /// Re-evaluate which event is imminent every this many ticks (~10s).
+    private let tickerEvaluateEvery = 40
 
     init() {
         Task {
             await refresh()
             await observeStoreChanges()
+        }
+        Task { await runTicker() }
+    }
+
+    /// Drives the menu-bar ticker: every ~10s recomputes the imminent-event
+    /// line from current events + time, and every tick advances the marquee.
+    private func runTicker() async {
+        var tick = 0
+        var offset = 0
+        var source: String?
+        while !Task.isCancelled {
+            if tick % tickerEvaluateEvery == 0 {
+                let text = TickerLogic.tickerText(events, leadMinutes: tickerLeadMinutes)
+                if text != source {
+                    source = text
+                    offset = 0
+                }
+            }
+            if let source {
+                tickerFrame = TickerLogic.marqueeFrame(
+                    source, offset: offset, windowLength: tickerWindow
+                )
+                offset &+= 1
+            } else {
+                tickerFrame = nil
+            }
+            tick &+= 1
+            try? await Task.sleep(for: tickerTick)
         }
     }
 
