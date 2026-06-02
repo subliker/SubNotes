@@ -12,6 +12,8 @@ Internet Accounts. SubNotes adds the things the stock app lacks:
 Menu-bar only (no Dock icon), built with SwiftUI + AppKit, reading the system
 calendars through EventKit. Targets recent macOS (Liquid Glass).
 
+Declared support: liquid glASS.
+
 > Status: early development. See [PLAN.md](PLAN.md) for the full roadmap.
 
 ## Roadmap to release
