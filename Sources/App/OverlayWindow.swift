@@ -6,17 +6,21 @@ import AppKit
 /// lets clicks pass straight through to whatever is behind it ("click-through
 /// in empty zones").
 ///
-/// This issue (#7) delivers only the window surface and its layering/passthrough
-/// behavior. The skin-rendering engine (#8) and the interactive button layer
-/// (#9) build on top: the button layer will flip `isInteractive` (or refine the
-/// hit test) so controls capture clicks while the rest of the surface stays
-/// click-through.
-final class OverlayWindow: NSWindow {
+/// #7 delivered the window surface and its layering/passthrough behavior; #8 the
+/// skin renderer. The interactive button layer (#9) sits on top: instead of
+/// flipping `isInteractive` for the whole surface, the window now captures clicks
+/// *only* over the reported control rects (``interactiveScreenRects``) and stays
+/// click-through everywhere else.
+///
+/// It is an `NSPanel` with `.nonactivatingPanel` so a click on a control fires
+/// immediately without activating SubNotes or stealing the foreground app's
+/// focus — exactly what a transient reminder overlay wants.
+final class OverlayWindow: NSPanel {
 
     init(screen: NSScreen) {
         super.init(
             contentRect: screen.frame,
-            styleMask: .borderless,
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -49,18 +53,57 @@ final class OverlayWindow: NSWindow {
         ignoresMouseEvents = true
     }
 
-    // Borderless windows refuse key/main by default; make that explicit so the
-    // overlay never grabs focus even when a future interactive region asks for
-    // first responder.
+    deinit { removeMouseMonitors() }
+
+    // Borderless panels refuse key/main by default; make that explicit so the
+    // overlay never grabs focus even while its controls receive clicks.
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 
-    /// Toggles whether the window swallows mouse events. `false` (default) means
-    /// every click passes through to the app behind; `true` lets hosted controls
-    /// receive clicks. The button layer (#9) will drive this.
-    var isInteractive: Bool {
-        get { !ignoresMouseEvents }
-        set { ignoresMouseEvents = !newValue }
+    // MARK: - Per-region click-through (#9)
+
+    /// Screen-space rects (AppKit bottom-left origin, global coords) over which
+    /// the overlay should capture clicks. Everywhere else stays click-through.
+    /// Empty restores full passthrough.
+    var interactiveScreenRects: [CGRect] = [] {
+        didSet { refreshMouseMonitoring() }
+    }
+
+    /// Mouse-moved monitors that keep `ignoresMouseEvents` in sync with whether
+    /// the cursor currently sits over a control rect. A *global* monitor fires
+    /// while the events go to the app behind (so we can re-arm when the cursor
+    /// returns over the bar); a *local* one covers the case where they reach us.
+    private var mouseMonitors: [Any] = []
+
+    private func refreshMouseMonitoring() {
+        guard !interactiveScreenRects.isEmpty else {
+            removeMouseMonitors()
+            ignoresMouseEvents = true
+            return
+        }
+        if mouseMonitors.isEmpty {
+            let mask: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged]
+            let global = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] _ in
+                self?.updateMousePassthrough()
+            }
+            let local = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
+                self?.updateMousePassthrough()
+                return event
+            }
+            mouseMonitors = [global, local].compactMap { $0 }
+        }
+        updateMousePassthrough()
+    }
+
+    private func updateMousePassthrough() {
+        let location = NSEvent.mouseLocation
+        let overControl = interactiveScreenRects.contains { $0.contains(location) }
+        ignoresMouseEvents = !overControl
+    }
+
+    private func removeMouseMonitors() {
+        for monitor in mouseMonitors { NSEvent.removeMonitor(monitor) }
+        mouseMonitors.removeAll()
     }
 }
 
@@ -95,8 +138,31 @@ final class OverlayController {
     }
 
     func dismiss() {
-        for window in windows { window.orderOut(nil) }
+        for window in windows {
+            window.interactiveScreenRects = []  // tear down mouse monitors
+            window.orderOut(nil)
+        }
         windows.removeAll()
+    }
+
+    /// Marks the regions (in SwiftUI global coords, top-left origin, as reported
+    /// by the button layer) that should capture clicks. Converts them to AppKit
+    /// screen space and hands them to the window so the bar is clickable while the
+    /// rest of the overlay passes clicks through to the app behind.
+    func setInteractiveSwiftUIRects(_ rects: [CGRect]) {
+        guard let window = windows.first,
+              let screen = window.screen ?? NSScreen.main else { return }
+        let frame = screen.frame
+        window.interactiveScreenRects = rects
+            .filter { $0 != .zero }
+            .map { r in
+                CGRect(
+                    x: frame.minX + r.minX,
+                    y: frame.minY + (frame.height - r.maxY),
+                    width: r.width,
+                    height: r.height
+                )
+            }
     }
 }
 

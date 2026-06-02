@@ -25,8 +25,8 @@ flowchart LR
     P0["Phase 0 · Spike<br/>✅"] --> P1["Phase 1 · CalendarCore<br/>✅"]
     P1 --> P2["Phase 2 · Popover list<br/>✅"]
     P2 --> P3["Phase 3 · Menu-bar ticker<br/>✅"]
-    P3 --> P4["Phase 4 · Overlays + skin engine<br/>🚧"]
-    P4 --> P5["Phase 5 · Settings · login item · .dmg + CI"]
+    P3 --> P4["Phase 4 · Overlays + skin engine<br/>✅"]
+    P4 --> P5["Phase 5 · Settings · login item · .dmg + CI<br/>🚧"]
     P5 --> REL(["🚀 Release<br/>unsigned .dmg via GitHub"])
     REL -.-> P6["Phase 6 · Color-keyed rules"]
     P6 -.-> GA["Google Calendar API<br/>per-event color"]
@@ -38,8 +38,8 @@ flowchart LR
 | 1 | CalendarCore — model, access, live refresh, video links | ✅ done |
 | 2 | Popover list — grouped by day, color key, deep-link | ✅ done |
 | 3 | Menu-bar ticker — smart appearance | ✅ done |
-| 4 | Overlays — transparent window, skin engine, button layer | 🚧 in progress |
-| 5 | Settings, login item, `.dmg` packaging + CI → **release** | ⏳ next |
+| 4 | Overlays — transparent window, skin engine, button layer | ✅ done |
+| 5 | Settings, login item, `.dmg` packaging + CI → **release** | 🚧 next |
 
 Phase 6 (color-keyed customization) and the read-only Google Calendar API step
 land **after** the first release.

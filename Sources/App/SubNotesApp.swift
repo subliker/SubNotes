@@ -91,18 +91,53 @@ final class AppModel {
         overlay.present {
             SkinAcceptanceView(
                 manifest: manifest, event: event, accent: accent,
-                index: index, total: total
+                index: index, total: total,
+                perform: { [weak self] action in self?.handleOverlayAction(action, for: event) },
+                onBarFrame: { [weak self] rect in
+                    self?.overlay.setInteractiveSwiftUIRects([rect])
+                }
             )
         }
     }
 
+    /// Minutes to hide the overlay for when the user taps «Отложить».
+    private let snoozeMinutes = 5
+
+    /// Routes a button-layer action (#9). For acceptance this drives the live
+    /// overlay; the scheduler will reuse the same handler when it presents
+    /// reminders for real.
+    func handleOverlayAction(_ action: OverlayAction, for event: CalEvent) {
+        switch action {
+        case .dismiss:
+            overlayThemeIndex = 0
+            overlay.dismiss()
+        case .openInCalendar:
+            EventOpener.openInCalendar(event)
+            overlay.dismiss()
+        case .connect:
+            if let url = event.videoLink?.url { NSWorkspace.shared.open(url) }
+            overlay.dismiss()
+        case .snooze:
+            let manifest = themes[overlayThemeIndex]
+            overlay.dismiss()
+            Task { [weak self] in
+                guard let self else { return }
+                try? await Task.sleep(for: .seconds(Double(snoozeMinutes) * 60))
+                guard !self.overlay.isShowing else { return }
+                self.presentOverlay(manifest)
+            }
+        }
+    }
+
     /// Stand-in event so the overlay is demoable before a real reminder fires.
+    /// Carries a Meet link so the «Подключиться» button shows during acceptance.
     private static let sampleEvent = CalEvent(
         id: "sample",
         title: "Демо-напоминание",
         start: Date().addingTimeInterval(900),
         end: Date().addingTimeInterval(4500),
-        location: "Переговорка"
+        location: "Переговорка",
+        videoLink: VideoLink(url: URL(string: "https://meet.google.com/abc-defg-hij")!, provider: .meet)
     )
 
     /// Marquee tuning: window width in chars and scroll cadence.
@@ -164,20 +199,25 @@ final class AppModel {
     }
 }
 
-/// Wraps a ``SkinView`` with a small, non-interactive caption naming the current
-/// skin and its position in the cycle. It is an acceptance aid for #8 (so the
-/// reviewer knows which of the built-in skins they are looking at), not part of
-/// the shipped skin surface; it sits outside the manifest-driven render.
+/// Composes the manifest-driven ``SkinView`` with the standard floating button
+/// layer (#9) and a small acceptance caption naming the current skin. The caption
+/// is an acceptance aid (so the reviewer knows which built-in skin they see), not
+/// part of the shipped surface; it sits outside the manifest-driven render.
 struct SkinAcceptanceView: View {
     let manifest: ThemeManifest
     let event: CalEvent
     let accent: Color
     let index: Int
     let total: Int
+    let perform: (OverlayAction) -> Void
+    /// Reports the button bar's frame so the window makes only that region
+    /// clickable (per-region click-through).
+    let onBarFrame: (CGRect) -> Void
 
     var body: some View {
         ZStack(alignment: .bottom) {
             SkinView(manifest: manifest, event: event, accent: accent)
+            OverlayButtonBar(event: event, accent: accent, perform: perform)
             Text("Скин \(index + 1)/\(total): \(manifest.name)")
                 .font(.callout.weight(.medium))
                 .padding(.horizontal, 14)
@@ -187,6 +227,7 @@ struct SkinAcceptanceView: View {
                 .allowsHitTesting(false)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onPreferenceChange(ButtonBarFrameKey.self) { onBarFrame($0) }
     }
 }
 
