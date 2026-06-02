@@ -64,6 +64,9 @@ public final class EventReader {
             event.notes
         ])
         let calendarColorHex = event.calendar.cgColor.hexString
+        let reminders = (event.alarms ?? []).map { alarm in
+            alarm.absoluteDate ?? event.startDate.addingTimeInterval(alarm.relativeOffset)
+        }
         return CalEvent(
             id: event.eventIdentifier ?? UUID().uuidString,
             title: event.title ?? "Untitled",
@@ -74,7 +77,8 @@ public final class EventReader {
             colorKey: colorResolver.colorKey(for: event),
             calendarTitle: event.calendar.title,
             location: event.location,
-            videoLink: videoLink
+            videoLink: videoLink,
+            reminders: reminders
         )
     }
 }

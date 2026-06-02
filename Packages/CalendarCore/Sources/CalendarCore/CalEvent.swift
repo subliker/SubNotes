@@ -16,6 +16,10 @@ public struct CalEvent: Codable, Identifiable, Hashable, Sendable {
     public let calendarTitle: String?
     public let location: String?
     public let videoLink: VideoLink?
+    /// Absolute moments this event's alarms fire at (from EKAlarm: an absolute
+    /// date, or the event start offset by the alarm's relative offset). Drives
+    /// the overlay reminder scheduler. Empty when the event has no alarms.
+    public let reminders: [Date]
 
     public init(
         id: String,
@@ -27,7 +31,8 @@ public struct CalEvent: Codable, Identifiable, Hashable, Sendable {
         colorKey: ColorKey? = nil,
         calendarTitle: String? = nil,
         location: String? = nil,
-        videoLink: VideoLink? = nil
+        videoLink: VideoLink? = nil,
+        reminders: [Date] = []
     ) {
         self.id = id
         self.title = title
@@ -39,5 +44,6 @@ public struct CalEvent: Codable, Identifiable, Hashable, Sendable {
         self.calendarTitle = calendarTitle
         self.location = location
         self.videoLink = videoLink
+        self.reminders = reminders
     }
 }
