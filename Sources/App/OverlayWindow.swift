@@ -53,8 +53,6 @@ final class OverlayWindow: NSPanel {
         ignoresMouseEvents = true
     }
 
-    deinit { removeMouseMonitors() }
-
     // Borderless panels refuse key/main by default; make that explicit so the
     // overlay never grabs focus even while its controls receive clicks.
     override var canBecomeKey: Bool { false }

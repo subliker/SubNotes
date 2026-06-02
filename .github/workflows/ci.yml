@@ -11,12 +11,18 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: macos-15
+    # macOS 26 (Tahoe) runner — needed for the Liquid Glass SDK (glassEffect,
+    # GlassEffectContainer, .buttonStyle(.glass)). The project targets macOS 26
+    # with no back-compat, so an older Xcode/SDK cannot compile it.
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select latest Xcode
-        run: sudo xcode-select -s /Applications/Xcode_26.app || sudo xcode-select -s /Applications/Xcode.app
+      - name: Select newest Xcode
+        run: |
+          XCODE="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)"
+          sudo xcode-select -s "${XCODE:-/Applications/Xcode.app}"
+          xcodebuild -version
 
       - name: Install XcodeGen
         run: brew install xcodegen
