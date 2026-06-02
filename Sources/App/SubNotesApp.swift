@@ -55,14 +55,55 @@ final class AppModel {
     /// the popover; #8/#9 will hook it to `ReminderScheduler` triggers.
     let overlay = OverlayController()
 
-    /// Shows or hides the placeholder overlay (UI acceptance for #7).
+    /// Themes available to the overlay: built-in skins plus any user themes.
+    /// Loaded once; the picker / per-color rules (Phase 6) refine selection later.
+    @ObservationIgnored
+    private(set) lazy var themes: [ThemeManifest] = ThemeLoader.loadAll(userDirectory: nil)
+
+    /// Which built-in theme the overlay is currently showing; advances on each
+    /// toggle so UI acceptance of #8 can step through every skin.
+    private var overlayThemeIndex = 0
+
+    /// Cycles the overlay through the built-in skins for visual acceptance of #8:
+    /// each press shows the next skin against the next event (or a sample), and a
+    /// press past the last skin hides the overlay. #9 adds interactive buttons and
+    /// the scheduler drives it for real.
     func toggleOverlay() {
+        guard !themes.isEmpty else { return }
         if overlay.isShowing {
-            overlay.dismiss()
+            overlayThemeIndex += 1
+            if overlayThemeIndex >= themes.count {
+                overlayThemeIndex = 0
+                overlay.dismiss()
+                return
+            }
         } else {
-            overlay.present { OverlayPlaceholderView() }
+            overlayThemeIndex = 0
+        }
+        presentOverlay(themes[overlayThemeIndex])
+    }
+
+    private func presentOverlay(_ manifest: ThemeManifest) {
+        let event = events.first ?? Self.sampleEvent
+        let accent = event.displayColor ?? .accentColor
+        let index = overlayThemeIndex
+        let total = themes.count
+        overlay.present {
+            SkinAcceptanceView(
+                manifest: manifest, event: event, accent: accent,
+                index: index, total: total
+            )
         }
     }
+
+    /// Stand-in event so the overlay is demoable before a real reminder fires.
+    private static let sampleEvent = CalEvent(
+        id: "sample",
+        title: "Демо-напоминание",
+        start: Date().addingTimeInterval(900),
+        end: Date().addingTimeInterval(4500),
+        location: "Переговорка"
+    )
 
     /// Marquee tuning: window width in chars and scroll cadence.
     private let tickerWindow = 22
@@ -123,6 +164,32 @@ final class AppModel {
     }
 }
 
+/// Wraps a ``SkinView`` with a small, non-interactive caption naming the current
+/// skin and its position in the cycle. It is an acceptance aid for #8 (so the
+/// reviewer knows which of the built-in skins they are looking at), not part of
+/// the shipped skin surface; it sits outside the manifest-driven render.
+struct SkinAcceptanceView: View {
+    let manifest: ThemeManifest
+    let event: CalEvent
+    let accent: Color
+    let index: Int
+    let total: Int
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            SkinView(manifest: manifest, event: event, accent: accent)
+            Text("Скин \(index + 1)/\(total): \(manifest.name)")
+                .font(.callout.weight(.medium))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(.thinMaterial, in: Capsule())
+                .padding(.bottom, 40)
+                .allowsHitTesting(false)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 struct EventListView: View {
     @Bindable var model: AppModel
 
@@ -167,7 +234,7 @@ struct EventListView: View {
                 Image(systemName: "rectangle.on.rectangle")
             }
             .buttonStyle(.borderless)
-            .help("Показать/скрыть оверлей (Phase 4)")
+            .help("Перебрать скины оверлея (Phase 4)")
             Button {
                 Task { await model.refresh() }
             } label: {
@@ -288,7 +355,7 @@ private extension CalEvent {
     }
 }
 
-private extension Color {
+extension Color {
     init?(hex: String?) {
         guard let hex,
               hex.hasPrefix("#"),

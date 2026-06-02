@@ -1,0 +1,32 @@
+{
+  "id": "plane",
+  "name": "Самолёт",
+  "version": 1,
+  "duration": 9,
+  "animation": { "type": "spriteKit", "duration": 7 },
+  "textZones": [
+    {
+      "id": "title",
+      "frame": { "x": 0.1, "y": 0.2, "width": 0.8, "height": 0.06 },
+      "template": "{{title}}",
+      "fontSize": 20,
+      "alignment": "center"
+    },
+    {
+      "id": "subtitle",
+      "frame": { "x": 0.1, "y": 0.26, "width": 0.8, "height": 0.04 },
+      "template": "{{time}} · {{location}}",
+      "fontSize": 14,
+      "alignment": "center"
+    }
+  ],
+  "buttons": [
+    {
+      "id": "dismiss",
+      "action": "dismiss",
+      "frame": { "x": 0.45, "y": 0.3, "width": 0.1, "height": 0.05 },
+      "label": "Закрыть"
+    }
+  ],
+  "assets": []
+}

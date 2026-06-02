@@ -1,0 +1,38 @@
+{
+  "id": "banner",
+  "name": "Баннер",
+  "version": 1,
+  "duration": 8,
+  "animation": { "type": "slide", "duration": 0.35 },
+  "textZones": [
+    {
+      "id": "title",
+      "frame": { "x": 0.3, "y": 0.06, "width": 0.4, "height": 0.05 },
+      "template": "{{title}}",
+      "fontSize": 20,
+      "alignment": "leading"
+    },
+    {
+      "id": "subtitle",
+      "frame": { "x": 0.3, "y": 0.11, "width": 0.4, "height": 0.035 },
+      "template": "{{time}} · {{location}}",
+      "fontSize": 13,
+      "alignment": "leading"
+    }
+  ],
+  "buttons": [
+    {
+      "id": "dismiss",
+      "action": "dismiss",
+      "frame": { "x": 0.62, "y": 0.07, "width": 0.07, "height": 0.06 },
+      "label": "Закрыть"
+    },
+    {
+      "id": "open",
+      "action": "openInCalendar",
+      "frame": { "x": 0.62, "y": 0.07, "width": 0.07, "height": 0.06 },
+      "label": "Открыть"
+    }
+  ],
+  "assets": []
+}

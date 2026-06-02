@@ -7,16 +7,16 @@
   "textZones": [
     {
       "id": "title",
-      "frame": { "x": 0.1, "y": 0.35, "width": 0.8, "height": 0.2 },
+      "frame": { "x": 0.39, "y": 0.44, "width": 0.22, "height": 0.05 },
       "template": "{{title}}",
-      "fontSize": 28,
+      "fontSize": 22,
       "alignment": "center"
     },
     {
       "id": "subtitle",
-      "frame": { "x": 0.1, "y": 0.58, "width": 0.8, "height": 0.12 },
+      "frame": { "x": 0.39, "y": 0.5, "width": 0.22, "height": 0.035 },
       "template": "{{time}} · {{location}}",
-      "fontSize": 15,
+      "fontSize": 13,
       "alignment": "center"
     }
   ],
@@ -24,13 +24,13 @@
     {
       "id": "dismiss",
       "action": "dismiss",
-      "frame": { "x": 0.62, "y": 0.78, "width": 0.16, "height": 0.1 },
+      "frame": { "x": 0.43, "y": 0.55, "width": 0.07, "height": 0.045 },
       "label": "Закрыть"
     },
     {
       "id": "open",
       "action": "openInCalendar",
-      "frame": { "x": 0.8, "y": 0.78, "width": 0.16, "height": 0.1 },
+      "frame": { "x": 0.5, "y": 0.55, "width": 0.07, "height": 0.045 },
       "label": "Открыть"
     }
   ],
