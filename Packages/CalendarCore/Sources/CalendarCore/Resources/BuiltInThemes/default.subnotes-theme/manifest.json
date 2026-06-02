@@ -1,0 +1,38 @@
+{
+  "id": "default",
+  "name": "Default",
+  "version": 1,
+  "duration": 8,
+  "animation": { "type": "fade", "duration": 0.3 },
+  "textZones": [
+    {
+      "id": "title",
+      "frame": { "x": 0.1, "y": 0.35, "width": 0.8, "height": 0.2 },
+      "template": "{{title}}",
+      "fontSize": 28,
+      "alignment": "center"
+    },
+    {
+      "id": "subtitle",
+      "frame": { "x": 0.1, "y": 0.58, "width": 0.8, "height": 0.12 },
+      "template": "{{time}} · {{location}}",
+      "fontSize": 15,
+      "alignment": "center"
+    }
+  ],
+  "buttons": [
+    {
+      "id": "dismiss",
+      "action": "dismiss",
+      "frame": { "x": 0.62, "y": 0.78, "width": 0.16, "height": 0.1 },
+      "label": "Закрыть"
+    },
+    {
+      "id": "open",
+      "action": "openInCalendar",
+      "frame": { "x": 0.8, "y": 0.78, "width": 0.16, "height": 0.1 },
+      "label": "Открыть"
+    }
+  ],
+  "assets": []
+}
