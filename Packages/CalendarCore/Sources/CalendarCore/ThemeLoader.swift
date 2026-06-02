@@ -37,6 +37,26 @@ public struct ThemeLoader: Sendable {
             .sorted { $0.id < $1.id }
     }
 
+    /// Directory holding the themes bundled with the app, or nil if unavailable.
+    public static var builtInThemesDirectory: URL? {
+        Bundle.module.url(forResource: "BuiltInThemes", withExtension: nil)
+    }
+
+    /// Loads the themes shipped inside the app bundle.
+    public static func loadBuiltIn() -> [ThemeManifest] {
+        guard let dir = builtInThemesDirectory else { return [] }
+        return loadAll(from: dir)
+    }
+
+    /// Built-in themes plus any user themes in `userDirectory`.
+    /// User themes override built-in ones sharing the same id.
+    public static func loadAll(userDirectory: URL?) -> [ThemeManifest] {
+        let user = userDirectory.map { loadAll(from: $0) } ?? []
+        let userIds = Set(user.map(\.id))
+        let builtIn = loadBuiltIn().filter { !userIds.contains($0.id) }
+        return (builtIn + user).sorted { $0.id < $1.id }
+    }
+
     // MARK: - Private
 
     private static func validate(_ manifest: ThemeManifest) throws {

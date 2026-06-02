@@ -8,7 +8,10 @@ let package = Package(
         .library(name: "CalendarCore", targets: ["CalendarCore"])
     ],
     targets: [
-        .target(name: "CalendarCore"),
+        .target(
+            name: "CalendarCore",
+            resources: [.copy("Resources/BuiltInThemes")]
+        ),
         .testTarget(name: "CalendarCoreTests", dependencies: ["CalendarCore"])
     ]
 )

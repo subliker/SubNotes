@@ -283,4 +283,37 @@ import Testing
             #expect(ThemeLoader.loadAll(from: tmp).isEmpty)
         }
     }
+
+    // MARK: - Built-in themes
+
+    @Test func loadsBuiltInThemes() {
+        let themes = ThemeLoader.loadBuiltIn()
+        #expect(themes.contains { $0.id == "default" })
+    }
+
+    @Test func mergesBuiltInWithUserThemes() throws {
+        try withTempDir { tmp in
+            _ = try makeTheme(in: tmp, name: "custom",
+                              json: #"{"id":"custom","name":"Custom","version":1}"#)
+            let merged = ThemeLoader.loadAll(userDirectory: tmp)
+            #expect(merged.contains { $0.id == "default" })
+            #expect(merged.contains { $0.id == "custom" })
+        }
+    }
+
+    @Test func userThemeOverridesBuiltInWithSameId() throws {
+        try withTempDir { tmp in
+            _ = try makeTheme(in: tmp, name: "override",
+                              json: #"{"id":"default","name":"User Default","version":2}"#)
+            let merged = ThemeLoader.loadAll(userDirectory: tmp)
+            let defaults = merged.filter { $0.id == "default" }
+            #expect(defaults.count == 1)
+            #expect(defaults.first?.name == "User Default")
+        }
+    }
+
+    @Test func loadAllWithNilUserDirectoryReturnsBuiltInOnly() {
+        let themes = ThemeLoader.loadAll(userDirectory: nil)
+        #expect(themes.contains { $0.id == "default" })
+    }
 }
