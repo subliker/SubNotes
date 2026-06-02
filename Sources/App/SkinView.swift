@@ -71,11 +71,15 @@ struct SkinView: View {
                 width: box.width * size.width + pad * 2,
                 height: box.height * size.height + pad * 2
             )
+            // Liquid Glass panel (macOS 26), matching the system-glass popover —
+            // not the legacy `.regularMaterial` blur. The accent stroke keeps the
+            // color-as-key identity readable on the glass.
             RoundedRectangle(cornerRadius: 20)
-                .fill(.regularMaterial)
+                .fill(.clear)
+                .glassEffect(.regular.tint(accent.opacity(0.18)), in: RoundedRectangle(cornerRadius: 20))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(accent.opacity(0.5), lineWidth: 2)
+                        .stroke(accent.opacity(0.45), lineWidth: 1.5)
                 )
                 .frame(width: rect.width, height: rect.height)
                 .position(x: rect.midX, y: rect.midY)
