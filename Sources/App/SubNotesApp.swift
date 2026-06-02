@@ -51,6 +51,19 @@ final class AppModel {
 
     private let reader = EventReader()
 
+    /// Presents the Phase 4 overlay window. Driven for now by a debug toggle in
+    /// the popover; #8/#9 will hook it to `ReminderScheduler` triggers.
+    let overlay = OverlayController()
+
+    /// Shows or hides the placeholder overlay (UI acceptance for #7).
+    func toggleOverlay() {
+        if overlay.isShowing {
+            overlay.dismiss()
+        } else {
+            overlay.present { OverlayPlaceholderView() }
+        }
+    }
+
     /// Marquee tuning: window width in chars and scroll cadence.
     private let tickerWindow = 22
     private let tickerTick = Duration.milliseconds(250)
@@ -148,6 +161,13 @@ struct EventListView: View {
             Text("SubNotes")
                 .font(.headline)
             Spacer()
+            Button {
+                model.toggleOverlay()
+            } label: {
+                Image(systemName: "rectangle.on.rectangle")
+            }
+            .buttonStyle(.borderless)
+            .help("Показать/скрыть оверлей (Phase 4)")
             Button {
                 Task { await model.refresh() }
             } label: {
