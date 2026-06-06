@@ -155,7 +155,20 @@ SubNotes/
   Оверлей переведён с `.regularMaterial` на настоящий `glassEffect`, чтобы язык
   материала совпадал с системным стеклом поповера. Выбор скина — позже по
   `ColorKey`.
-- **Фаза 5 — Настройки, login item, упаковка.** SMAppService автозапуск, `.dmg`, GitHub Actions, README (снятие карантина `xattr -dr com.apple.quarantine` + документация формата тем).
+- **Фаза 5 — Настройки, login item, упаковка.** SMAppService автозапуск, `.dmg`,
+  GitHub Actions release workflow, README (снятие карантина
+  `xattr -dr com.apple.quarantine` + документация формата тем).
+  Разбивка по issues:
+  - `core` #20: `SettingsStore` — Codable-модель настроек в CalendarCore
+    (enabled calendars, horizon days, ticker lead-time, snooze intervals).
+  - `core` #21: release workflow — сборка `.dmg` и публикация на GitHub Releases
+    (триггер: тег `v*.*.*`).
+  - `core` #22: README — документация формата `.subnotes-theme` +
+    инструкция снятия карантина.
+  - `needs-ui` #23: экран настроек (SwiftUI) — выбор календарей, горизонт,
+    lead-время, snooze, прозрачность Liquid Glass оверлея.
+  - `needs-ui` #24: login item — SMAppService автозапуск; ⚠️ риск совместимости
+    с ad-hoc сборкой → возможна альтернатива LaunchAgents.
 - **Фаза 6 — Кастомизация по цвету.** UI-таблица правил «цвет → (скин, lead-время,
   шаблон строки, звук)»; правила ключуются по `ColorKey`. Применяется к тикеру,
   оверлеям, уведомлениям.
