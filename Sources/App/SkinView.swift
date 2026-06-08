@@ -15,6 +15,8 @@ struct SkinView: View {
     let event: CalEvent
     /// Accent color resolved from the event's `ColorKey` (color-as-key).
     var accent: Color = .accentColor
+    /// Density of the glass card, `0` almost clear … `1` fully dense (settings #23).
+    var glassOpacity: Double = 0.85
 
     @State private var shown = false
 
@@ -81,6 +83,9 @@ struct SkinView: View {
                     RoundedRectangle(cornerRadius: 20)
                         .stroke(accent.opacity(0.45), lineWidth: 1.5)
                 )
+                // The density slider (#23) fades the whole glass surface; the
+                // text zones stay fully opaque so the reminder always reads.
+                .opacity(glassOpacity)
                 .frame(width: rect.width, height: rect.height)
                 .position(x: rect.midX, y: rect.midY)
         }

@@ -12,6 +12,7 @@ import Testing
         #expect(s.horizonDays == 7)
         #expect(s.tickerLeadMinutes == 15)
         #expect(s.snoozeIntervals == [5, 10, 15])
+        #expect(s.overlayGlassOpacity == 0.85)
     }
 
     // MARK: - Round-trip encode/decode
@@ -65,13 +66,44 @@ import Testing
         #expect(AppSettings(snoozeIntervals: [-1, 0]).snoozeIntervals == [5, 10, 15])
     }
 
+    @Test func opacityIsClampedToUnitRange() {
+        #expect(AppSettings(overlayGlassOpacity: -0.5).overlayGlassOpacity == 0)
+        #expect(AppSettings(overlayGlassOpacity: 1.7).overlayGlassOpacity == 1)
+        #expect(AppSettings(overlayGlassOpacity: 0.4).overlayGlassOpacity == 0.4)
+        #expect(AppSettings(overlayGlassOpacity: .nan).overlayGlassOpacity == 0.85)
+    }
+
     @Test func sanitizationAlsoAppliesOnDecode() throws {
-        let json = #"{"horizonDays": -10, "tickerLeadMinutes": -2, "snoozeIntervals": [0, -3]}"#
+        let json = #"{"horizonDays": -10, "tickerLeadMinutes": -2, "snoozeIntervals": [0, -3], "overlayGlassOpacity": 9}"#
             .data(using: .utf8)!
         let s = try JSONDecoder().decode(AppSettings.self, from: json)
         #expect(s.horizonDays == 7)
         #expect(s.tickerLeadMinutes == 15)
         #expect(s.snoozeIntervals == [5, 10, 15])
+        #expect(s.overlayGlassOpacity == 1)
+    }
+
+    // MARK: - Calendar selection
+
+    @Test func allCalendarsEnabledByDefault() {
+        let s = AppSettings()
+        #expect(s.isCalendarEnabled("anything"))
+    }
+
+    @Test func togglingOffMaterializesSelectionMinusOne() {
+        let known = ["a", "b", "c"]
+        let s = AppSettings().togglingCalendar("b", enabled: false, knownIDs: known)
+        #expect(s.isCalendarEnabled("a"))
+        #expect(!s.isCalendarEnabled("b"))
+        #expect(s.isCalendarEnabled("c"))
+        #expect(Set(s.enabledCalendarIDs ?? []) == Set(["a", "c"]))
+    }
+
+    @Test func reEnablingEveryCalendarCollapsesBackToNil() {
+        let known = ["a", "b"]
+        let off = AppSettings().togglingCalendar("a", enabled: false, knownIDs: known)
+        let on = off.togglingCalendar("a", enabled: true, knownIDs: known)
+        #expect(on.enabledCalendarIDs == nil)
     }
 }
 
