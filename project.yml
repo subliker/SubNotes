@@ -33,6 +33,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.subliker.subnotes
         GENERATE_INFOPLIST_FILE: "YES"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_LSUIElement: "YES"
         INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "SubNotes reads your calendars to show upcoming events."
         INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 subliker. MIT License."
