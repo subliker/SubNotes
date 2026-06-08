@@ -13,6 +13,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public static let defaultHorizonDays = 7
     public static let defaultTickerLeadMinutes = 15
     public static let defaultSnoozeIntervals = [5, 10, 15]
+    /// Opacity of the reminder overlay's Liquid Glass card — `0` almost clear,
+    /// `1` fully dense. Confirmed as a desired knob on acceptance #7.
+    public static let defaultOverlayGlassOpacity = 0.85
 
     // MARK: - Stored values
 
@@ -31,18 +34,23 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// positive and the list is never empty.
     public let snoozeIntervals: [Int]
 
+    /// Opacity of the overlay's Liquid Glass card. Always within `0...1`.
+    public let overlayGlassOpacity: Double
+
     // MARK: - Init
 
     public init(
         enabledCalendarIDs: [String]? = nil,
         horizonDays: Int = AppSettings.defaultHorizonDays,
         tickerLeadMinutes: Int = AppSettings.defaultTickerLeadMinutes,
-        snoozeIntervals: [Int] = AppSettings.defaultSnoozeIntervals
+        snoozeIntervals: [Int] = AppSettings.defaultSnoozeIntervals,
+        overlayGlassOpacity: Double = AppSettings.defaultOverlayGlassOpacity
     ) {
         self.enabledCalendarIDs = enabledCalendarIDs
         self.horizonDays = AppSettings.sanitizedHorizon(horizonDays)
         self.tickerLeadMinutes = AppSettings.sanitizedLead(tickerLeadMinutes)
         self.snoozeIntervals = AppSettings.sanitizedSnooze(snoozeIntervals)
+        self.overlayGlassOpacity = AppSettings.sanitizedOpacity(overlayGlassOpacity)
     }
 
     public init(from decoder: Decoder) throws {
@@ -54,9 +62,12 @@ public struct AppSettings: Codable, Sendable, Equatable {
             ?? AppSettings.defaultTickerLeadMinutes
         let snooze = try c.decodeIfPresent([Int].self, forKey: .snoozeIntervals)
             ?? AppSettings.defaultSnoozeIntervals
+        let opacity = try c.decodeIfPresent(Double.self, forKey: .overlayGlassOpacity)
+            ?? AppSettings.defaultOverlayGlassOpacity
         horizonDays = AppSettings.sanitizedHorizon(horizon)
         tickerLeadMinutes = AppSettings.sanitizedLead(lead)
         snoozeIntervals = AppSettings.sanitizedSnooze(snooze)
+        overlayGlassOpacity = AppSettings.sanitizedOpacity(opacity)
     }
 
     // MARK: - Sanitization
@@ -72,5 +83,10 @@ public struct AppSettings: Codable, Sendable, Equatable {
     private static func sanitizedSnooze(_ value: [Int]) -> [Int] {
         let positives = value.filter { $0 > 0 }
         return positives.isEmpty ? defaultSnoozeIntervals : positives
+    }
+
+    private static func sanitizedOpacity(_ value: Double) -> Double {
+        guard value.isFinite else { return defaultOverlayGlassOpacity }
+        return min(max(value, 0), 1)
     }
 }

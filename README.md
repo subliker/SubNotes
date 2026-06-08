@@ -41,7 +41,7 @@ flowchart LR
 | 2 | Popover list — grouped by day, color key, deep-link | ✅ done |
 | 3 | Menu-bar ticker — smart appearance | ✅ done |
 | 4 | Overlays — transparent window, skin engine, button layer | ✅ done |
-| 5 | Settings, login item, `.dmg` packaging + CI → **release** | 🚧 next |
+| 5 | Settings window + login item ✅ · `.dmg` packaging + CI → **release** | 🚧 in progress |
 
 Phase 6 (color-keyed customization) and the read-only Google Calendar API step
 land **after** the first release.

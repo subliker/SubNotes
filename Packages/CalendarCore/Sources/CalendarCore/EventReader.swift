@@ -29,12 +29,31 @@ public final class EventReader {
         EKEventStore.authorizationStatus(for: .event)
     }
 
-    public func upcomingEvents(within days: Int = 7) -> [CalEvent] {
+    /// All event calendars the user has access to, as AppKit-free value types
+    /// for the Settings picker.
+    public func availableCalendars() -> [CalendarInfo] {
+        store.calendars(for: .event)
+            .map { cal in
+                CalendarInfo(
+                    id: cal.calendarIdentifier,
+                    title: cal.title,
+                    colorHex: cal.cgColor.hexString
+                )
+            }
+            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    /// Upcoming events over the next `days`, optionally restricted to the
+    /// calendars in `calendarIDs` (`nil` = all calendars).
+    public func upcomingEvents(within days: Int = 7, calendarIDs: [String]? = nil) -> [CalEvent] {
         let start = Date()
         guard let end = Calendar.current.date(byAdding: .day, value: days, to: start) else {
             return []
         }
-        let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
+        let calendars = calendarIDs.map { ids in
+            store.calendars(for: .event).filter { ids.contains($0.calendarIdentifier) }
+        }
+        let predicate = store.predicateForEvents(withStart: start, end: end, calendars: calendars)
         return store.events(matching: predicate)
             .sorted { $0.startDate < $1.startDate }
             .map { Self.normalize($0) }

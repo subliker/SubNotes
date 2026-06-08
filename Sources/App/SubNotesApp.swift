@@ -14,6 +14,10 @@ struct SubNotesApp: App {
             TickerLabel(model: model)
         }
         .menuBarExtraStyle(.window)
+
+        Settings {
+            SettingsView(model: model)
+        }
     }
 }
 
@@ -44,12 +48,24 @@ final class AppModel {
     /// imminent (the label then shows the icon). Driven by `runTicker`.
     var tickerFrame: String?
 
+    /// Live user preferences, persisted via ``settingsStore``. Mutating through
+    /// ``applySettings(_:)`` re-reads events and re-renders affected surfaces.
+    private(set) var settings: AppSettings
+
+    /// Calendars offered in the Settings picker. Populated after access is
+    /// granted; empty until then.
+    private(set) var availableCalendars: [CalendarInfo] = []
+
+    /// Login-item (autostart) state, bound to the Settings toggle (#24).
+    let loginItems = LoginItemManager()
+
     /// Minutes before an event that the ticker starts showing it.
-    var tickerLeadMinutes = 15
+    private var tickerLeadMinutes: Int { settings.tickerLeadMinutes }
 
     var days: [EventDay] { EventGrouping.byDay(events) }
 
     private let reader = EventReader()
+    private let settingsStore = SettingsStore()
 
     /// Presents the Phase 4 overlay window. Driven for now by a debug toggle in
     /// the popover; #8/#9 will hook it to `ReminderScheduler` triggers.
@@ -88,9 +104,11 @@ final class AppModel {
         let accent = event.displayColor ?? .accentColor
         let index = overlayThemeIndex
         let total = themes.count
+        let glassOpacity = settings.overlayGlassOpacity
         overlay.present {
             SkinAcceptanceView(
                 manifest: manifest, event: event, accent: accent,
+                glassOpacity: glassOpacity,
                 index: index, total: total,
                 perform: { [weak self] action in self?.handleOverlayAction(action, for: event) },
                 onBarFrame: { [weak self] rect in
@@ -100,8 +118,9 @@ final class AppModel {
         }
     }
 
-    /// Minutes to hide the overlay for when the user taps «Отложить».
-    private let snoozeMinutes = 5
+    /// Minutes to hide the overlay for when the user taps «Отложить» — the
+    /// first configured snooze interval.
+    private var snoozeMinutes: Int { settings.snoozeIntervals.first ?? 5 }
 
     /// Routes a button-layer action (#9). For acceptance this drives the live
     /// overlay; the scheduler will reuse the same handler when it presents
@@ -147,11 +166,26 @@ final class AppModel {
     private let tickerEvaluateEvery = 40
 
     init() {
+        settings = settingsStore.settings
         Task {
             await refresh()
             await observeStoreChanges()
         }
         Task { await runTicker() }
+    }
+
+    /// Persists `new` and re-applies it: reloads events under the new horizon /
+    /// calendar filter so changes show immediately. The ticker and overlay read
+    /// `settings` directly, so they pick up lead-time / opacity on their next tick.
+    func applySettings(_ new: AppSettings) {
+        settings = new
+        settingsStore.save(new)
+        if accessGranted {
+            events = reader.upcomingEvents(
+                within: new.horizonDays,
+                calendarIDs: new.enabledCalendarIDs
+            )
+        }
     }
 
     /// Drives the menu-bar ticker: every ~10s recomputes the imminent-event
@@ -188,13 +222,21 @@ final class AppModel {
             accessGranted = false
         }
         guard accessGranted else { return }
-        events = reader.upcomingEvents()
+        availableCalendars = reader.availableCalendars()
+        events = reader.upcomingEvents(
+            within: settings.horizonDays,
+            calendarIDs: settings.enabledCalendarIDs
+        )
     }
 
     private func observeStoreChanges() async {
         for await _ in reader.storeChanges() {
             guard accessGranted else { continue }
-            events = reader.upcomingEvents()
+            availableCalendars = reader.availableCalendars()
+            events = reader.upcomingEvents(
+                within: settings.horizonDays,
+                calendarIDs: settings.enabledCalendarIDs
+            )
         }
     }
 }
@@ -207,6 +249,8 @@ struct SkinAcceptanceView: View {
     let manifest: ThemeManifest
     let event: CalEvent
     let accent: Color
+    /// Liquid Glass density of the card, from settings (#23).
+    var glassOpacity: Double = AppSettings.defaultOverlayGlassOpacity
     let index: Int
     let total: Int
     let perform: (OverlayAction) -> Void
@@ -216,7 +260,7 @@ struct SkinAcceptanceView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            SkinView(manifest: manifest, event: event, accent: accent)
+            SkinView(manifest: manifest, event: event, accent: accent, glassOpacity: glassOpacity)
             OverlayButtonBar(event: event, accent: accent, perform: perform)
             Text("Скин \(index + 1)/\(total): \(manifest.name)")
                 .font(.callout.weight(.medium))
@@ -233,6 +277,7 @@ struct SkinAcceptanceView: View {
 
 struct EventListView: View {
     @Bindable var model: AppModel
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         VStack(spacing: 0) {
@@ -282,6 +327,16 @@ struct EventListView: View {
                 Image(systemName: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
+            Button {
+                // LSUIElement apps aren't active, so the Settings window would
+                // open behind everything — activate first, then open it.
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                openSettings()
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .buttonStyle(.borderless)
+            .help("Настройки…")
             Button {
                 NSApplication.shared.terminate(nil)
             } label: {
