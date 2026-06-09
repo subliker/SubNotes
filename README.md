@@ -4,7 +4,7 @@ A lightweight macOS companion that sits on top of the system Calendar. It does
 not duplicate your calendar — Google events already sync into Calendar.app via
 Internet Accounts. SubNotes adds the things the stock app lacks:
 
-- **Desktop widget** — your next events at a glance.
+- **Menu-bar event list** — your next events at a glance, in a popover.
 - **Menu-bar ticker** — reminders that appear shortly before an event (RunCat-style).
 - **Interactive overlays** — customizable, skinnable reminder windows
   (from a simple card to a flying-plane banner).
@@ -14,7 +14,8 @@ calendars through EventKit. Targets recent macOS (Liquid Glass).
 
 Declared support: liquid glASS.
 
-> Status: early development. See [PLAN.md](PLAN.md) for the full roadmap.
+> Status: **[v0.0.1](https://github.com/subliker/SubNotes/releases/latest)** released —
+> first unsigned build (Phases 0–5). See [PLAN.md](PLAN.md) for the full roadmap.
 
 ## Roadmap to release
 
@@ -28,8 +29,8 @@ flowchart LR
     P1 --> P2["Phase 2 · Popover list<br/>✅"]
     P2 --> P3["Phase 3 · Menu-bar ticker<br/>✅"]
     P3 --> P4["Phase 4 · Overlays + skin engine<br/>✅"]
-    P4 --> P5["Phase 5 · Settings · login item · .dmg + CI<br/>🚧"]
-    P5 --> REL(["🚀 Release<br/>unsigned .dmg via GitHub"])
+    P4 --> P5["Phase 5 · Settings · login item · .dmg + CI<br/>✅"]
+    P5 --> REL(["🚀 Release v0.0.1<br/>unsigned .dmg via GitHub ✅"])
     REL -.-> P6["Phase 6 · Color-keyed rules"]
     P6 -.-> GA["Google Calendar API<br/>per-event color"]
 ```
@@ -41,7 +42,7 @@ flowchart LR
 | 2 | Popover list — grouped by day, color key, deep-link | ✅ done |
 | 3 | Menu-bar ticker — smart appearance | ✅ done |
 | 4 | Overlays — transparent window, skin engine, button layer | ✅ done |
-| 5 | Settings window + login item ✅ · `.dmg` packaging + CI → **release** | 🚧 in progress |
+| 5 | Settings window + login item · `.dmg` packaging + CI → **release [v0.0.1](https://github.com/subliker/SubNotes/releases/latest)** | ✅ done |
 
 Phase 6 (color-keyed customization) and the read-only Google Calendar API step
 land **after** the first release.
