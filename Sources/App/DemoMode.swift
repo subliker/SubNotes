@@ -42,16 +42,19 @@ enum DemoData {
         CalEvent(id: "d1", title: "Дейли-стендап", start: today(10, 0), end: today(10, 15),
                  calendarColorHex: "#3B82F6", calendarTitle: "Работа",
                  location: "Zoom", videoLink: meet),
-        CalEvent(id: "d2", title: "Обед с командой", start: today(13, 0), end: today(14, 0),
+        CalEvent(id: "d2", title: "Обед с Киригаей", start: today(13, 0), end: today(14, 0),
                  calendarColorHex: "#22C55E", calendarTitle: "Личное",
                  location: "Кафе «Орбита»"),
-        CalEvent(id: "d3", title: "День рождения Ани", start: today(0, 0), end: today(23, 59),
+        CalEvent(id: "d3", title: "День рождения Аксиньи", start: today(0, 0), end: today(23, 59),
                  isAllDay: true, calendarColorHex: "#EC4899", calendarTitle: "Семья"),
         CalEvent(id: "d4", title: "Ревью дизайна", start: tomorrow(11, 30), end: tomorrow(12, 30),
                  calendarColorHex: "#F59E0B", calendarTitle: "Работа",
                  location: "Переговорка 4", videoLink: meet),
         CalEvent(id: "d5", title: "1:1 с менеджером", start: tomorrow(15, 0), end: tomorrow(15, 30),
                  calendarColorHex: "#8B5CF6", calendarTitle: "Работа"),
+        CalEvent(id: "d6", title: "Попробовать новую игру Мастера меча онлайн",
+                 start: tomorrow(20, 0), end: tomorrow(22, 0),
+                 calendarColorHex: "#22C55E", calendarTitle: "Личное"),
     ]
 
     /// The event shown on the reminder overlay (carries a Meet link so the
