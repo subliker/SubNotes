@@ -61,6 +61,29 @@ land **after** the first release.
 >
 > — автор
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/popover.png" width="300"><br>
+      <sub>Menu-bar event list — grouped by day, color-keyed, all-day on top</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/settings.png" width="300"><br>
+      <sub>Settings — calendars, horizon, ticker lead, overlay glass density, snooze</sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/overlay.png" width="540"><br>
+  <sub>Reminder overlay — a Liquid Glass skin with the floating action bar</sub>
+</p>
+
+<sub>Screenshots use built-in sample data (`SUBNOTES_DEMO=1`), not real calendars —
+regenerate with [`scripts/capture-screenshots.sh`](scripts/capture-screenshots.sh).</sub>
+
 ## Installing
 
 SubNotes ships as an **unsigned** `.dmg` on [GitHub Releases](https://github.com/subliker/SubNotes/releases)

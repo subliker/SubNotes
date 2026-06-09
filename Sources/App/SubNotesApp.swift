@@ -167,6 +167,17 @@ final class AppModel {
 
     init() {
         settings = settingsStore.settings
+
+        // Demo mode (README screenshots): seed deterministic sample data and
+        // lay out the surfaces as real windows, never touching EventKit.
+        if DemoMode.isEnabled {
+            accessGranted = true
+            availableCalendars = DemoData.calendars
+            events = DemoData.events
+            DispatchQueue.main.async { [self] in DemoWindows.present(model: self) }
+            return
+        }
+
         Task {
             await refresh()
             await observeStoreChanges()
@@ -179,6 +190,7 @@ final class AppModel {
     /// `settings` directly, so they pick up lead-time / opacity on their next tick.
     func applySettings(_ new: AppSettings) {
         settings = new
+        guard !DemoMode.isEnabled else { return }
         settingsStore.save(new)
         if accessGranted {
             events = reader.upcomingEvents(
