@@ -165,6 +165,14 @@ final class AppModel {
     /// Re-evaluate which event is imminent every this many ticks (~10s).
     private let tickerEvaluateEvery = 40
 
+    /// Localizes `{{time}}` in per-color ticker templates (Phase 6).
+    private static let tickerTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        f.dateStyle = .none
+        return f
+    }()
+
     init() {
         settings = settingsStore.settings
 
@@ -174,6 +182,7 @@ final class AppModel {
             accessGranted = true
             availableCalendars = DemoData.calendars
             events = DemoData.events
+            settings = settings.with(colorRules: DemoData.colorRules)
             DispatchQueue.main.async { [self] in DemoWindows.present(model: self) }
             return
         }
@@ -200,6 +209,41 @@ final class AppModel {
         }
     }
 
+    // MARK: - Color rules (Phase 6)
+
+    /// Distinct colors the user can attach a rule to — the colors actually
+    /// present in their calendars and upcoming events. Sorted by hex for a
+    /// stable menu order.
+    var ruleColorOptions: [ColorKey] {
+        var keys: [String: ColorKey] = [:]
+        for cal in availableCalendars {
+            if let key = ColorKey(hex: cal.colorHex) { keys[key.hex] = key }
+        }
+        for event in events {
+            if let key = event.colorKey { keys[key.hex] = key }
+        }
+        return keys.values.sorted { $0.hex < $1.hex }
+    }
+
+    /// A friendly name for a color — the title of a calendar that uses it, if
+    /// any — so a rule row reads «Работа» rather than a bare hex.
+    func colorName(for key: ColorKey) -> String? {
+        availableCalendars.first { ColorKey(hex: $0.colorHex) == key }?.title
+    }
+
+    /// Skins offered in a rule's skin picker (built-in + user themes).
+    var availableSkins: [ThemeManifest] { themes }
+
+    /// Inserts or replaces a rule, persisting through `applySettings`.
+    func upsertColorRule(_ rule: ColorRule) {
+        applySettings(settings.with(colorRules: settings.colorRules.upserting(rule)))
+    }
+
+    /// Removes the rule for a color.
+    func removeColorRule(_ key: ColorKey) {
+        applySettings(settings.with(colorRules: settings.colorRules.removing(key)))
+    }
+
     /// Drives the menu-bar ticker: every ~10s recomputes the imminent-event
     /// line from current events + time, and every tick advances the marquee.
     private func runTicker() async {
@@ -208,7 +252,12 @@ final class AppModel {
         var source: String?
         while !Task.isCancelled {
             if tick % tickerEvaluateEvery == 0 {
-                let text = TickerLogic.tickerText(events, leadMinutes: tickerLeadMinutes)
+                let text = TickerLogic.tickerText(
+                    events,
+                    defaultLeadMinutes: tickerLeadMinutes,
+                    rules: settings.colorRules,
+                    timeFormatter: Self.tickerTimeFormatter
+                )
                 if text != source {
                     source = text
                     offset = 0

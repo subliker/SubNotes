@@ -65,6 +65,38 @@ import Testing
         #expect(set.rule(for: nil) == nil)
     }
 
+    // MARK: - Editing
+
+    @Test func upsertingAppendsNewColor() {
+        let set = ColorRuleSet.empty
+            .upserting(ColorRule(colorKey: red, tickerLeadMinutes: 30))
+        #expect(set.rule(for: red)?.tickerLeadMinutes == 30)
+    }
+
+    @Test func upsertingReplacesInPlace() {
+        let set = ColorRuleSet(rules: [
+            ColorRule(colorKey: red, tickerLeadMinutes: 30),
+            ColorRule(colorKey: blue, sound: "ping")
+        ])
+        let updated = set.upserting(ColorRule(colorKey: red, tickerLeadMinutes: 5))
+        #expect(updated.rules.map(\.colorKey) == [red, blue])   // order preserved
+        #expect(updated.rule(for: red)?.tickerLeadMinutes == 5)
+    }
+
+    @Test func upsertingEmptyRuleRemovesColor() {
+        let set = ColorRuleSet(rules: [ColorRule(colorKey: red, tickerLeadMinutes: 30)])
+        let updated = set.upserting(ColorRule(colorKey: red))
+        #expect(updated.rule(for: red) == nil)
+    }
+
+    @Test func removingDropsColor() {
+        let set = ColorRuleSet(rules: [
+            ColorRule(colorKey: red, tickerLeadMinutes: 30),
+            ColorRule(colorKey: blue, sound: "ping")
+        ])
+        #expect(set.removing(red).rules.map(\.colorKey) == [blue])
+    }
+
     // MARK: - Resolution
 
     @Test func resolveFallsBackToDefaultsWithoutRule() {
