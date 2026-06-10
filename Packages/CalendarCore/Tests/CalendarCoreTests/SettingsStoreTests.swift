@@ -13,6 +13,26 @@ import Testing
         #expect(s.tickerLeadMinutes == 15)
         #expect(s.snoozeIntervals == [5, 10, 15])
         #expect(s.overlayGlassOpacity == 0.85)
+        #expect(s.colorRules == .empty)
+    }
+
+    // MARK: - Color rules (Phase 6)
+
+    @Test func colorRulesRoundTrip() throws {
+        let original = AppSettings(colorRules: ColorRuleSet(rules: [
+            ColorRule(colorKey: ColorKey(hex: "#FF0000")!, tickerLeadMinutes: 30),
+            ColorRule(colorKey: ColorKey(hex: "#00FF00")!, overlaySkinID: "plane")
+        ]))
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
+        #expect(decoded == original)
+        #expect(decoded.colorRules.rules.count == 2)
+    }
+
+    @Test func legacyJSONWithoutColorRulesDecodesEmpty() throws {
+        let json = #"{"horizonDays": 7}"#.data(using: .utf8)!
+        let s = try JSONDecoder().decode(AppSettings.self, from: json)
+        #expect(s.colorRules == .empty)
     }
 
     // MARK: - Round-trip encode/decode
