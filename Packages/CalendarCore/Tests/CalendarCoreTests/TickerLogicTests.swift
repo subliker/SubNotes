@@ -8,7 +8,9 @@ import Testing
     private func event(
         _ id: String,
         startsInMinutes minutes: Double,
-        allDay: Bool = false
+        allDay: Bool = false,
+        color: String? = nil,
+        location: String? = nil
     ) -> CalEvent {
         let start = now.addingTimeInterval(minutes * 60)
         return CalEvent(
@@ -16,8 +18,18 @@ import Testing
             title: id,
             start: start,
             end: start.addingTimeInterval(3600),
-            isAllDay: allDay
+            isAllDay: allDay,
+            colorKey: color.flatMap { ColorKey(hex: $0) },
+            location: location
         )
+    }
+
+    private func utcTimeFormatter() -> DateFormatter {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        f.dateFormat = "HH:mm"
+        return f
     }
 
     @Test func includesEventsWithinLeadWindow() {
@@ -91,6 +103,80 @@ import Testing
     @Test func lineSaysNowAtZeroMinutes() {
         let entry = TickerEntry(event: event("e", startsInMinutes: 0), minutesUntilStart: 0)
         #expect(TickerLogic.line(for: entry) == "⏰ сейчас · e")
+    }
+
+    // MARK: - Per-color rules (Phase 6)
+
+    @Test func perColorLeadWidensWindowForMatchingColor() {
+        let rules = ColorRuleSet(rules: [
+            ColorRule(colorKey: ColorKey(hex: "#FF0000")!, tickerLeadMinutes: 30)
+        ])
+        // 25 min away: beyond the 15-min default, inside the red rule's 30.
+        let entries = TickerLogic.imminentEntries(
+            [event("red", startsInMinutes: 25, color: "#FF0000")],
+            now: now,
+            defaultLeadMinutes: 15,
+            rules: rules
+        )
+        #expect(entries.map(\.event.id) == ["red"])
+    }
+
+    @Test func perColorLeadLeavesOtherColorsOnDefault() {
+        let rules = ColorRuleSet(rules: [
+            ColorRule(colorKey: ColorKey(hex: "#FF0000")!, tickerLeadMinutes: 30)
+        ])
+        let entries = TickerLogic.imminentEntries(
+            [event("blue", startsInMinutes: 25, color: "#0000FF")],
+            now: now,
+            defaultLeadMinutes: 15,
+            rules: rules
+        )
+        #expect(entries.isEmpty)
+    }
+
+    @Test func perColorTemplateRendersPlaceholders() {
+        let rules = ColorRuleSet(rules: [
+            ColorRule(
+                colorKey: ColorKey(hex: "#FF0000")!,
+                tickerTemplate: "🔴 {{lead}} — {{title}} @ {{location}}"
+            )
+        ])
+        let text = TickerLogic.tickerText(
+            [event("Standup", startsInMinutes: 10, color: "#FF0000", location: "Meet")],
+            now: now,
+            defaultLeadMinutes: 15,
+            rules: rules,
+            timeFormatter: utcTimeFormatter()
+        )
+        #expect(text == "🔴 через 10 мин — Standup @ Meet")
+    }
+
+    @Test func perColorTemplateFallsBackToDefaultLineWithoutRule() {
+        let text = TickerLogic.tickerText(
+            [event("Standup", startsInMinutes: 10, color: "#0000FF")],
+            now: now,
+            defaultLeadMinutes: 15,
+            rules: .empty,
+            timeFormatter: utcTimeFormatter()
+        )
+        #expect(text == "⏰ через 10 мин · Standup")
+    }
+
+    @Test func perColorTemplateCollapsesMissingLocation() {
+        let rules = ColorRuleSet(rules: [
+            ColorRule(
+                colorKey: ColorKey(hex: "#FF0000")!,
+                tickerTemplate: "{{title}} · {{location}}"
+            )
+        ])
+        let line = TickerLogic.line(
+            for: TickerEntry(
+                event: event("Standup", startsInMinutes: 5, color: "#FF0000"),
+                minutesUntilStart: 5),
+            rules: rules,
+            timeFormatter: utcTimeFormatter()
+        )
+        #expect(line == "Standup")
     }
 
     @Test func marqueeShowsShortTextAsIs() {

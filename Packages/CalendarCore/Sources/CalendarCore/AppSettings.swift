@@ -37,6 +37,11 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// Opacity of the overlay's Liquid Glass card. Always within `0...1`.
     public let overlayGlassOpacity: Double
 
+    /// Per-color customization rules (Phase 6), keyed by ``ColorKey``. Empty by
+    /// default — every event uses the global ticker/overlay settings until the
+    /// user adds a rule.
+    public let colorRules: ColorRuleSet
+
     // MARK: - Init
 
     public init(
@@ -44,13 +49,15 @@ public struct AppSettings: Codable, Sendable, Equatable {
         horizonDays: Int = AppSettings.defaultHorizonDays,
         tickerLeadMinutes: Int = AppSettings.defaultTickerLeadMinutes,
         snoozeIntervals: [Int] = AppSettings.defaultSnoozeIntervals,
-        overlayGlassOpacity: Double = AppSettings.defaultOverlayGlassOpacity
+        overlayGlassOpacity: Double = AppSettings.defaultOverlayGlassOpacity,
+        colorRules: ColorRuleSet = .empty
     ) {
         self.enabledCalendarIDs = enabledCalendarIDs
         self.horizonDays = AppSettings.sanitizedHorizon(horizonDays)
         self.tickerLeadMinutes = AppSettings.sanitizedLead(tickerLeadMinutes)
         self.snoozeIntervals = AppSettings.sanitizedSnooze(snoozeIntervals)
         self.overlayGlassOpacity = AppSettings.sanitizedOpacity(overlayGlassOpacity)
+        self.colorRules = colorRules
     }
 
     public init(from decoder: Decoder) throws {
@@ -68,6 +75,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         tickerLeadMinutes = AppSettings.sanitizedLead(lead)
         snoozeIntervals = AppSettings.sanitizedSnooze(snooze)
         overlayGlassOpacity = AppSettings.sanitizedOpacity(opacity)
+        colorRules = try c.decodeIfPresent(ColorRuleSet.self, forKey: .colorRules)
+            ?? .empty
     }
 
     // MARK: - Sanitization
