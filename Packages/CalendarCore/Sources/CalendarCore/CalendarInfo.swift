@@ -37,14 +37,16 @@ extension AppSettings {
         horizonDays: Int? = nil,
         tickerLeadMinutes: Int? = nil,
         snoozeIntervals: [Int]? = nil,
-        overlayGlassOpacity: Double? = nil
+        overlayGlassOpacity: Double? = nil,
+        colorRules: ColorRuleSet? = nil
     ) -> AppSettings {
         AppSettings(
             enabledCalendarIDs: enabledCalendarIDs,
             horizonDays: horizonDays ?? self.horizonDays,
             tickerLeadMinutes: tickerLeadMinutes ?? self.tickerLeadMinutes,
             snoozeIntervals: snoozeIntervals ?? self.snoozeIntervals,
-            overlayGlassOpacity: overlayGlassOpacity ?? self.overlayGlassOpacity
+            overlayGlassOpacity: overlayGlassOpacity ?? self.overlayGlassOpacity,
+            colorRules: colorRules ?? self.colorRules
         )
     }
 
@@ -62,7 +64,8 @@ extension AppSettings {
             horizonDays: horizonDays,
             tickerLeadMinutes: tickerLeadMinutes,
             snoozeIntervals: snoozeIntervals,
-            overlayGlassOpacity: overlayGlassOpacity
+            overlayGlassOpacity: overlayGlassOpacity,
+            colorRules: colorRules
         )
     }
 }

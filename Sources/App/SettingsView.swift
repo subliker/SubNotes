@@ -13,6 +13,7 @@ struct SettingsView: View {
             dataSection
             tickerSection
             overlaySection
+            ColorRulesSection(model: model)
             startupSection
         }
         .formStyle(.grouped)

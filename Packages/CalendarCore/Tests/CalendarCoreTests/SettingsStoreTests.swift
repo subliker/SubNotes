@@ -29,6 +29,16 @@ import Testing
         #expect(decoded.colorRules.rules.count == 2)
     }
 
+    @Test func withPreservesColorRules() {
+        let rules = ColorRuleSet(rules: [
+            ColorRule(colorKey: ColorKey(hex: "#FF0000")!, tickerLeadMinutes: 30)
+        ])
+        let s = AppSettings(colorRules: rules)
+        #expect(s.with(horizonDays: 14).colorRules == rules)
+        #expect(s.togglingCalendar("a", enabled: false, knownIDs: ["a", "b"]).colorRules == rules)
+        #expect(s.with(colorRules: .empty).colorRules == .empty)
+    }
+
     @Test func legacyJSONWithoutColorRulesDecodesEmpty() throws {
         let json = #"{"horizonDays": 7}"#.data(using: .utf8)!
         let s = try JSONDecoder().decode(AppSettings.self, from: json)

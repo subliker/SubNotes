@@ -57,6 +57,15 @@ enum DemoData {
                  calendarColorHex: "#22C55E", calendarTitle: "Личное"),
     ]
 
+    /// A sample Phase 6 customization rule so the Settings color-rules table is
+    /// populated in the demo/screenshot (amber "work" events get a longer lead
+    /// and a custom ticker line).
+    static let colorRules = ColorRuleSet(rules: [
+        ColorRule(colorKey: ColorKey(hex: "#F59E0B")!,
+                  tickerLeadMinutes: 30,
+                  tickerTemplate: "🟠 {{lead}} · {{title}}")
+    ])
+
     /// The event shown on the reminder overlay (carries a Meet link so the
     /// «Подключиться» button appears).
     static let overlayEvent = CalEvent(

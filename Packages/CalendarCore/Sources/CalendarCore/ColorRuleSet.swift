@@ -77,6 +77,28 @@ public struct ColorRuleSet: Codable, Hashable, Sendable {
         )
     }
 
+    // MARK: - Editing
+
+    /// Returns a copy with `rule` replacing any existing rule for its color
+    /// (position preserved), or appended when new. An empty rule removes the
+    /// color's entry — a rule that overrides nothing is no rule.
+    public func upserting(_ rule: ColorRule) -> ColorRuleSet {
+        if rule.isEmpty { return removing(rule.colorKey) }
+        var found = false
+        var next = rules.map { existing -> ColorRule in
+            guard existing.colorKey == rule.colorKey else { return existing }
+            found = true
+            return rule
+        }
+        if !found { next.append(rule) }
+        return ColorRuleSet(rules: next)
+    }
+
+    /// Returns a copy without any rule for `colorKey`.
+    public func removing(_ colorKey: ColorKey) -> ColorRuleSet {
+        ColorRuleSet(rules: rules.filter { $0.colorKey != colorKey })
+    }
+
     // MARK: - Normalization
 
     /// First rule per color wins; no-op rules are dropped.
