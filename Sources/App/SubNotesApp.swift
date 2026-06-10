@@ -67,54 +67,90 @@ final class AppModel {
     private let reader = EventReader()
     private let settingsStore = SettingsStore()
 
-    /// Presents the Phase 4 overlay window. Driven for now by a debug toggle in
-    /// the popover; #8/#9 will hook it to `ReminderScheduler` triggers.
+    /// Presents Phase 4 reminder overlays, driven by ``runReminderScheduler``
+    /// from EKAlarm-derived `CalEvent.reminders`. The skin and sound are resolved
+    /// from the event's color rule (Phase 6); a debug button in the popover fires
+    /// a test reminder so this is verifiable without waiting for a real alarm.
     let overlay = OverlayController()
 
     /// Themes available to the overlay: built-in skins plus any user themes.
-    /// Loaded once; the picker / per-color rules (Phase 6) refine selection later.
     @ObservationIgnored
     private(set) lazy var themes: [ThemeManifest] = ThemeLoader.loadAll(userDirectory: nil)
 
-    /// Which built-in theme the overlay is currently showing; advances on each
-    /// toggle so UI acceptance of #8 can step through every skin.
-    private var overlayThemeIndex = 0
+    /// Reminders waiting to be shown (one overlay at a time) and the ids of
+    /// triggers already enqueued, so the poll loop never re-shows the same one.
+    private var reminderQueue: [ReminderTrigger] = []
+    private var seenTriggerIDs: Set<String> = []
 
-    /// Cycles the overlay through the built-in skins for visual acceptance of #8:
-    /// each press shows the next skin against the next event (or a sample), and a
-    /// press past the last skin hides the overlay. #9 adds interactive buttons and
-    /// the scheduler drives it for real.
-    func toggleOverlay() {
-        guard !themes.isEmpty else { return }
-        if overlay.isShowing {
-            overlayThemeIndex += 1
-            if overlayThemeIndex >= themes.count {
-                overlayThemeIndex = 0
-                overlay.dismiss()
-                return
+    /// How often the scheduler checks for due reminders. Reminders are
+    /// minute-granular, so a few seconds of slack is imperceptible and keeps the
+    /// loop robust across sleep/wake: missed-but-still-relevant alarms surface on
+    /// the next tick, stale ones are dropped by `ReminderScheduler`.
+    private let reminderPollInterval = Duration.seconds(5)
+
+    /// Polls for due reminders and queues each exactly once; `ReminderScheduler`
+    /// owns staleness and ordering, this loop only drives presentation.
+    private func runReminderScheduler() async {
+        while !Task.isCancelled {
+            for trigger in ReminderScheduler.due(events)
+            where seenTriggerIDs.insert(trigger.id).inserted {
+                reminderQueue.append(trigger)
             }
-        } else {
-            overlayThemeIndex = 0
+            presentNextReminderIfIdle()
+            try? await Task.sleep(for: reminderPollInterval)
         }
-        presentOverlay(themes[overlayThemeIndex])
     }
 
-    private func presentOverlay(_ manifest: ThemeManifest) {
-        let event = events.first ?? Self.sampleEvent
+    /// Shows the next queued reminder when no overlay is currently up.
+    private func presentNextReminderIfIdle() {
+        guard !overlay.isShowing, !reminderQueue.isEmpty else { return }
+        presentReminderOverlay(for: reminderQueue.removeFirst().event)
+    }
+
+    /// Debug aid in the popover: present a reminder for the nearest still-upcoming
+    /// event right now, through the real color-resolved path — so a skin rule can
+    /// be verified without scheduling an actual alarm. Toggles the overlay off if
+    /// one is already showing.
+    func presentTestReminder() {
+        guard !themes.isEmpty else { return }
+        if overlay.isShowing { overlay.dismiss(); return }
+        let event = events.first { $0.end > Date() } ?? events.first ?? Self.sampleEvent
+        presentReminderOverlay(for: event)
+    }
+
+    /// The skin to show for an event: its color rule's override, else `default`.
+    private func skin(for event: CalEvent) -> ThemeManifest {
+        if let id = settings.colorRules.rule(for: event.colorKey)?.overlaySkinID,
+           let manifest = themes.first(where: { $0.id == id }) {
+            return manifest
+        }
+        return themes.first { $0.id == "default" } ?? themes[0]
+    }
+
+    private func presentReminderOverlay(for event: CalEvent) {
+        guard !themes.isEmpty else { return }
+        let rule = settings.colorRules.rule(for: event.colorKey)
+        let manifest = skin(for: event)
         let accent = event.displayColor ?? .accentColor
-        let index = overlayThemeIndex
-        let total = themes.count
         let glassOpacity = settings.overlayGlassOpacity
         overlay.present {
-            SkinAcceptanceView(
-                manifest: manifest, event: event, accent: accent,
-                glassOpacity: glassOpacity,
-                index: index, total: total,
-                perform: { [weak self] action in self?.handleOverlayAction(action, for: event) },
-                onBarFrame: { [weak self] rect in
-                    self?.overlay.setInteractiveSwiftUIRects([rect])
-                }
+            ReminderOverlayView(
+                manifest: manifest, event: event, accent: accent, glassOpacity: glassOpacity,
+                perform: { [weak self] action in self?.handleReminderAction(action, for: event) },
+                onBarFrame: { [weak self] rect in self?.overlay.setInteractiveSwiftUIRects([rect]) }
             )
+        }
+        // The color rule's sound overrides the skin's own; nil means silent.
+        if let name = rule?.sound ?? manifest.sound { NSSound(named: name)?.play() }
+        // Honor a skin's auto-dismiss duration; with none, the overlay stays
+        // until the user reacts (PLAN default «висят»).
+        if let duration = manifest.duration {
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(duration))
+                guard let self, self.overlay.isShowing else { return }
+                self.overlay.dismiss()
+                self.presentNextReminderIfIdle()
+            }
         }
     }
 
@@ -122,28 +158,28 @@ final class AppModel {
     /// first configured snooze interval.
     private var snoozeMinutes: Int { settings.snoozeIntervals.first ?? 5 }
 
-    /// Routes a button-layer action (#9). For acceptance this drives the live
-    /// overlay; the scheduler will reuse the same handler when it presents
-    /// reminders for real.
-    func handleOverlayAction(_ action: OverlayAction, for event: CalEvent) {
+    /// Routes a reminder overlay's button action, then advances the queue.
+    func handleReminderAction(_ action: OverlayAction, for event: CalEvent) {
         switch action {
         case .dismiss:
-            overlayThemeIndex = 0
             overlay.dismiss()
+            presentNextReminderIfIdle()
         case .openInCalendar:
             EventOpener.openInCalendar(event)
             overlay.dismiss()
+            presentNextReminderIfIdle()
         case .connect:
             if let url = event.videoLink?.url { NSWorkspace.shared.open(url) }
             overlay.dismiss()
+            presentNextReminderIfIdle()
         case .snooze:
-            let manifest = themes[overlayThemeIndex]
             overlay.dismiss()
+            presentNextReminderIfIdle()
             Task { [weak self] in
                 guard let self else { return }
-                try? await Task.sleep(for: .seconds(Double(snoozeMinutes) * 60))
-                guard !self.overlay.isShowing else { return }
-                self.presentOverlay(manifest)
+                try? await Task.sleep(for: .seconds(Double(self.snoozeMinutes) * 60))
+                self.reminderQueue.append(ReminderTrigger(event: event, fireDate: Date()))
+                self.presentNextReminderIfIdle()
             }
         }
     }
@@ -192,6 +228,7 @@ final class AppModel {
             await observeStoreChanges()
         }
         Task { await runTicker() }
+        Task { await runReminderScheduler() }
     }
 
     /// Persists `new` and re-applies it: reloads events under the new horizon /
@@ -302,18 +339,15 @@ final class AppModel {
     }
 }
 
-/// Composes the manifest-driven ``SkinView`` with the standard floating button
-/// layer (#9) and a small acceptance caption naming the current skin. The caption
-/// is an acceptance aid (so the reviewer knows which built-in skin they see), not
-/// part of the shipped surface; it sits outside the manifest-driven render.
-struct SkinAcceptanceView: View {
+/// The shipped reminder surface: the manifest-driven ``SkinView`` with the
+/// floating button layer (#9) on top. The window makes only the button bar
+/// clickable (per-region click-through); the rest passes clicks through.
+struct ReminderOverlayView: View {
     let manifest: ThemeManifest
     let event: CalEvent
     let accent: Color
     /// Liquid Glass density of the card, from settings (#23).
     var glassOpacity: Double = AppSettings.defaultOverlayGlassOpacity
-    let index: Int
-    let total: Int
     let perform: (OverlayAction) -> Void
     /// Reports the button bar's frame so the window makes only that region
     /// clickable (per-region click-through).
@@ -323,13 +357,6 @@ struct SkinAcceptanceView: View {
         ZStack(alignment: .bottom) {
             SkinView(manifest: manifest, event: event, accent: accent, glassOpacity: glassOpacity)
             OverlayButtonBar(event: event, accent: accent, perform: perform)
-            Text("Скин \(index + 1)/\(total): \(manifest.name)")
-                .font(.callout.weight(.medium))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(.thinMaterial, in: Capsule())
-                .padding(.bottom, 40)
-                .allowsHitTesting(false)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onPreferenceChange(ButtonBarFrameKey.self) { onBarFrame($0) }
@@ -376,12 +403,12 @@ struct EventListView: View {
                 .font(.headline)
             Spacer()
             Button {
-                model.toggleOverlay()
+                model.presentTestReminder()
             } label: {
-                Image(systemName: "rectangle.on.rectangle")
+                Image(systemName: "bell.badge")
             }
             .buttonStyle(.borderless)
-            .help("Перебрать скины оверлея (Phase 4)")
+            .help("Показать тестовое напоминание (скин по цвету события)")
             Button {
                 Task { await model.refresh() }
             } label: {
